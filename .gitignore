@@ -1,3 +1,5 @@
-node_modules/
-.env
+webserver/backend/node_modules/
+webserver/backend/.env
+webserver/backend/package-lock.json
 .claude/
+CLAUDE.md
