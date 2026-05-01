@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0f">
+<title>LMU Setup HUB — Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a0f;
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #f0f0f8;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(227,0,34,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(227,0,34,0.07) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .demo-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: #6a6a8a;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .phones {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .phone-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .phone-label {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: #6a6a8a;
+    text-transform: uppercase;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 320px;
+    background: #111118;
+    border-radius: 40px;
+    padding: 12px;
+    box-shadow:
+      0 0 0 1px #2a2a3a,
+      0 40px 80px rgba(0,0,0,0.7),
+      0 0 60px rgba(227,0,34,0.05);
+    position: relative;
+  }
+
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 5px;
+    background: #2a2a3a;
+    border-radius: 3px;
+    z-index: 10;
+  }
+
+  .phone-screen {
+    background: #0a0a0f;
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Screen content */
+  .screen {
+    padding: 44px 20px 28px;
+    min-height: 560px;
+  }
+
+  /* Background grid inside screen */
+  .screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(227,0,34,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(227,0,34,0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+
+  .screen > * { position: relative; z-index: 1; }
+
+  /* Glow */
+  .screen::after {
+    content: '';
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 140px;
+    background: radial-gradient(ellipse, rgba(227,0,34,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Header */
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: #6a6a8a;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+    text-align: center;
+  }
+
+  .logo-main {
+    font-family: 'Orbitron', monospace;
+    font-size: 17px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: #f0f0f8;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 6px;
+    line-height: 1;
+  }
+
+  .logo-main span { color: #e30022; }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 18px;
+    font-size: 10px;
+    color: #6a6a8a;
+    letter-spacing: 0.08em;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+
+  .dot.green { background: #00cc77; box-shadow: 0 0 6px #00cc77; animation: blink 2s infinite; }
+  .dot.blue  { background: #0088cc; box-shadow: 0 0 6px #0088cc; }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .tabs {
+    display: flex;
+    background: #13131a;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 18px;
+    gap: 3px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 6px;
+    border-radius: 8px;
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #6a6a8a;
+    user-select: none;
+  }
+
+  .tab.active-push { background: #e30022; color: #ffffff; }
+  .tab.active-pull { background: #0088cc; color: #ffffff; }
+
+  .field-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: #6a6a8a;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .input-mock {
+    background: #13131a;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .input-mock.focused {
+    border-color: #e30022;
+    box-shadow: 0 0 0 2px rgba(227,0,34,0.1);
+  }
+
+  .input-mock.focused-pull {
+    border-color: #0088cc;
+    box-shadow: 0 0 0 2px rgba(0,136,204,0.1);
+  }
+
+  .input-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #f0f0f8;
+    letter-spacing: 0.05em;
+  }
+
+  .input-text.placeholder { color: #2a2a3a; font-weight: 400; font-size: 13px; font-family: 'DM Mono', monospace; }
+
+  .char-badge {
+    font-size: 10px;
+    color: #6a6a8a;
+  }
+
+  .btn-mock {
+    width: 100%;
+    padding: 17px;
+    border-radius: 10px;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-align: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .btn-mock:active { transform: scale(0.97); }
+
+  .btn-push-mock { background: #e30022; color: #ffffff; }
+  .btn-push-mock:hover { background: #cc001e; }
+  .btn-pull-mock { background: #0088cc; color: #ffffff; }
+  .btn-pull-mock:hover { background: #006fa8; }
+
+  .info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .info-card {
+    background: #13131a;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .info-card-label { font-size: 8px; letter-spacing: 0.2em; color: #6a6a8a; text-transform: uppercase; margin-bottom: 3px; }
+  .info-card-value { font-family: 'Orbitron', monospace; font-size: 10px; color: #f0f0f8; }
+
+  /* Toast */
+  .toast-mock {
+    position: absolute;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 20;
+  }
+
+  .toast-mock.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .toast-mock.success {
+    background: rgba(0,204,119,0.08);
+    border: 1px solid rgba(0,204,119,0.3);
+    color: #00cc77;
+  }
+
+  .toast-mock.error {
+    background: rgba(255,56,96,0.08);
+    border: 1px solid rgba(255,56,96,0.3);
+    color: #ff3860;
+  }
+
+  .toast-id {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: #e30022;
+    margin-top: 4px;
+  }
+
+  /* Arrow between phones */
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 60px;
+    color: #6a6a8a;
+    position: relative;
+    z-index: 1;
+  }
+
+  .arrow-line {
+    width: 2px;
+    height: 60px;
+    background: linear-gradient(to bottom, #e30022, #0088cc);
+    border-radius: 2px;
+    position: relative;
+  }
+
+  .arrow-line::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #0088cc;
+  }
+
+  .arrow-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #6a6a8a;
+    text-align: center;
+  }
+
+  .discord-badge {
+    background: rgba(88,101,242,0.15);
+    border: 1px solid rgba(88,101,242,0.3);
+    color: #8b95f8;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 5px 10px;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn {
+    background: #13131a;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #6a6a8a;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .ctrl-btn:hover { border-color: #e30022; color: #e30022; }
+</style>
+</head>
+<body>
+
+<div class="demo-label">Preview · LMU Setup HUB</div>
+
+<div class="phones">
+
+  <!-- Phone A: sending -->
+  <div class="phone-wrap">
+    <div class="phone-label">Hodei · sending setup</div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="screen" id="screenA">
+
+          <div class="logo-sub">Le Mans Ultimate</div>
+          <div class="logo-main">SETUP <span>HUB</span></div>
+          <div class="status-bar">
+            <div class="dot green"></div>
+            <span>Redis OK · LMU local</span>
+          </div>
+
+          <div class="tabs">
+            <div class="tab active-push" id="tabA-push">⬆ SEND</div>
+            <div class="tab" id="tabA-pull" onclick="switchA()">⬇ RECEIVE</div>
+          </div>
+
+          <div id="panelA-push">
+            <div class="field-label">Session name</div>
+            <div class="input-mock focused" id="inputA">
+              <span class="input-text" id="inputAText"><span style="color:#e30022">█</span></span>
+              <span class="char-badge" id="inputACount">0/10</span>
+            </div>
+            <div class="btn-mock btn-push-mock" id="btnA" onclick="demoSend()">⬆ UPLOAD SETUP</div>
+            <div class="info-row">
+              <div class="info-card">
+                <div class="info-card-label">Server</div>
+                <div class="info-card-value" style="font-size:8px">192.168.1.42:8080</div>
+              </div>
+              <div class="info-card">
+                <div class="info-card-label">LMU</div>
+                <div class="info-card-value" style="font-size:9px">localhost:6397</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="toast-mock success" id="toastA">
+          ✓ Setup uploaded. Tell your friend:
+          <div class="toast-id" id="toastAId"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div class="arrow">
+    <div class="arrow-label">Redis</div>
+    <div class="arrow-line"></div>
+    <div class="discord-badge">Discord<br>"p2lmusetup"</div>
+    <div class="arrow-line" style="background: linear-gradient(to bottom, #0088cc, #e30022)"></div>
+    <div class="arrow-label">LMU local</div>
+  </div>
+
+  <!-- Phone B: receiving -->
+  <div class="phone-wrap">
+    <div class="phone-label">Friend · receiving setup</div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="screen" id="screenB">
+
+          <div class="logo-sub">Le Mans Ultimate</div>
+          <div class="logo-main">SETUP <span>HUB</span></div>
+          <div class="status-bar">
+            <div class="dot green"></div>
+            <span>Redis OK · LMU local</span>
+          </div>
+
+          <div class="tabs">
+            <div class="tab" id="tabB-push" onclick="switchB()">⬆ SEND</div>
+            <div class="tab active-pull" id="tabB-pull">⬇ RECEIVE</div>
+          </div>
+
+          <div id="panelB-pull">
+            <div class="field-label">Friend's session name</div>
+            <div class="input-mock focused-pull" id="inputB">
+              <span class="input-text" id="inputBText"><span style="color:#0088cc">█</span></span>
+              <span class="char-badge" id="inputBCount">0/10</span>
+            </div>
+            <div class="btn-mock btn-pull-mock" id="btnB" onclick="demoReceive()">⬇ LOAD INTO LMU</div>
+            <div class="info-row">
+              <div class="info-card">
+                <div class="info-card-label">Server</div>
+                <div class="info-card-value" style="font-size:8px">192.168.1.55:8080</div>
+              </div>
+              <div class="info-card">
+                <div class="info-card-label">LMU</div>
+                <div class="info-card-value" style="font-size:9px">localhost:6397</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="toast-mock success" id="toastB">
+          ✓ Setup loaded into LMU
+          <div class="toast-id" id="toastBId"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" onclick="demoSend()">▶ Simulate SEND</button>
+  <button class="ctrl-btn" onclick="demoReceive()">▶ Simulate RECEIVE</button>
+  <button class="ctrl-btn" onclick="demoError()">✕ Simulate ERROR</button>
+  <button class="ctrl-btn" onclick="resetDemo()">↺ Reset</button>
+</div>
+
+<script>
+  const NAME = 'p2lmusetup'
+  const SESSION_ID = 'p2lmusetup'
+
+  function typeText(elId, countId, text, color, cb) {
+    const el = document.getElementById(elId)
+    const cnt = document.getElementById(countId)
+    let i = 0
+    const interval = setInterval(() => {
+      if (i <= text.length) {
+        el.innerHTML = `<span style="color:${color}">${text.slice(0,i)}</span><span style="color:${color}; opacity:0.5">█</span>`
+        cnt.textContent = `${i}/10`
+        i++
+      } else {
+        clearInterval(interval)
+        el.innerHTML = `<span style="color:${color}">${text}</span>`
+        if (cb) cb()
+      }
+    }, 90)
+  }
+
+  function showToast(id, show) {
+    document.getElementById(id).classList.toggle('show', show)
+  }
+
+  function demoSend() {
+    resetDemo()
+    typeText('inputAText', 'inputACount', NAME, '#e30022', () => {
+      setTimeout(() => {
+        document.getElementById('btnA').textContent = '⏳ WAIT...'
+        setTimeout(() => {
+          document.getElementById('toastAId').textContent = SESSION_ID
+          showToast('toastA', true)
+          document.getElementById('btnA').textContent = '⬆ UPLOAD SETUP'
+        }, 800)
+      }, 300)
+    })
+  }
+
+  function demoReceive() {
+    typeText('inputBText', 'inputBCount', NAME, '#0088cc', () => {
+      setTimeout(() => {
+        document.getElementById('btnB').textContent = '⏳ WAIT...'
+        setTimeout(() => {
+          document.getElementById('toastBId').textContent = SESSION_ID
+          showToast('toastB', true)
+          document.getElementById('btnB').textContent = '⬇ LOAD INTO LMU'
+        }, 900)
+      }, 300)
+    })
+  }
+
+  function demoError() {
+    resetDemo()
+    typeText('inputAText', 'inputACount', NAME, '#e30022', () => {
+      setTimeout(() => {
+        const t = document.getElementById('toastA')
+        t.className = 'toast-mock error show'
+        document.getElementById('toastAId').textContent = ''
+        document.getElementById('toastA').childNodes[0].textContent = '✕ Session "p2lmusetup" already in use. Try another name.'
+      }, 500)
+    })
+  }
+
+  function resetDemo() {
+    showToast('toastA', false)
+    showToast('toastB', false)
+    document.getElementById('toastA').className = 'toast-mock success'
+    document.getElementById('inputAText').innerHTML = '<span style="color:#e30022">█</span>'
+    document.getElementById('inputBText').innerHTML = '<span style="color:#0088cc">█</span>'
+    document.getElementById('inputACount').textContent = '0/10'
+    document.getElementById('inputBCount').textContent = '0/10'
+    document.getElementById('btnA').textContent = '⬆ UPLOAD SETUP'
+    document.getElementById('btnB').textContent = '⬇ LOAD INTO LMU'
+    document.getElementById('toastAId').textContent = ''
+    document.getElementById('toastBId').textContent = ''
+    document.getElementById('toastA').childNodes[0].textContent = '✓ Setup uploaded. Tell your friend:'
+  }
+
+  function switchA() {
+    document.getElementById('tabA-push').className = 'tab'
+    document.getElementById('tabA-pull').className = 'tab active-pull'
+  }
+  function switchB() {
+    document.getElementById('tabB-push').className = 'tab active-push'
+    document.getElementById('tabB-pull').className = 'tab'
+  }
+
+  setTimeout(() => demoSend(), 800)
+  setTimeout(() => demoReceive(), 3200)
+</script>
+</body>
+</html>
