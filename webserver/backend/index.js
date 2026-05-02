@@ -1,152 +1,82 @@
 import express from 'express'
-import Redis from 'ioredis'
 import fetch from 'node-fetch'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import dotenv from 'dotenv'
-
-dotenv.config({ path: './server.cfg' })
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const LMU_URL = process.env.LMU_URL || 'http://localhost:6397'
+const PORT = process.env.PORT || 3002
+
 const app = express()
 app.use(express.json())
-app.get('/', (req, res) => res.sendFile(join(__dirname, '../frontend/index-ui.html')))
-app.get('/demo', (req, res) => res.sendFile(join(__dirname, '../demo/demo-ui.html')))
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379')
-redis.on('error', (err) => console.error('Redis error:', err))
+app.get('/', (req, res) => res.sendFile(join(__dirname, '../frontend/lmu-ffb.html')))
 
-const LMU_URL = process.env.LMU_URL || 'http://localhost:6397'
-const TTL = parseInt(process.env.TTL_SECONDS || '172800') // 48h
-
-function buildKey(name) {
-  return name.toLowerCase()
-}
-
-// ── PUSH: reads setup from local LMU and uploads to Redis ────────────────────
-app.post('/api/push', async (req, res) => {
-  const { sessionName } = req.body
-
-  if (!sessionName || sessionName.length > 10 || !/^[a-zA-Z0-9]+$/.test(sessionName)) {
-    return res.status(400).json({ error: 'Invalid name. Letters and numbers only, max 10 chars.' })
-  }
-
-  const key = buildKey(sessionName)
-
-  // Check if already exists
-  const exists = await redis.exists(key)
-  if (exists) {
-    return res.status(409).json({ error: `Session "${key}" already in use. Try another name.` })
-  }
-
-  // Read setup from local LMU
-  let setupJson
+app.get('/api/lmu/controls', async (req, res) => {
   try {
-    const lmuRes = await fetch(`${LMU_URL}/rest/garage/UIScreen/CarSetupOverview`)
-    if (!lmuRes.ok) throw new Error(`LMU responded with ${lmuRes.status}`)
-    setupJson = await lmuRes.json()
+    const r = await fetch(`${LMU_URL}/rest/options/UIScreen/Controls`)
+    if (!r.ok) return res.status(r.status).json({ error: 'LMU error' })
+    res.json(await r.json())
   } catch (err) {
-    return res.status(502).json({ error: `Could not read LMU setup: ${err.message}` })
+    res.status(502).json({ error: err.message })
   }
-
-  // Read metadata (car/circuit)
-  let summary = {}
-  try {
-    const sumRes = await fetch(`${LMU_URL}/rest/garage/summary`)
-    if (sumRes.ok) summary = await sumRes.json()
-  } catch (_) {}
-
-  const payload = {
-    setupJson,
-    summary,
-    sessionName: key,
-    createdAt: new Date().toISOString(),
-  }
-
-  await redis.set(key, JSON.stringify(payload), 'EX', TTL)
-
-  res.json({ sessionId: key, expiresIn: TTL })
 })
 
-// ── PULL: downloads setup from Redis and sends to local LMU ──────────────────
-app.post('/api/pull', async (req, res) => {
-  const { sessionName } = req.body
-
-  if (!sessionName || !/^[a-zA-Z0-9]+$/.test(sessionName)) {
-    return res.status(400).json({ error: 'Invalid session name.' })
-  }
-
-  const key = buildKey(sessionName)
-  const raw = await redis.get(key)
-
-  if (!raw) {
-    return res.status(404).json({ error: `Session "${key}" not found or expired.` })
-  }
-
-  const { setupJson, summary, createdAt } = JSON.parse(raw)
-
-  // Send each garage value individually to LMU
-  const garageValues = setupJson?.carSetup?.garageValues
-  if (!garageValues) {
-    return res.status(502).json({ error: 'Stored setup has no garageValues.' })
-  }
-
-  // GET current setup and only send values that differ
-  let currentValues = {}
+app.post('/api/lmu/setControls', async (req, res) => {
   try {
-    const cur = await fetch(`${LMU_URL}/rest/garage/UIScreen/CarSetupOverview`)
-    if (cur.ok) {
-      const curJson = await cur.json()
-      currentValues = curJson?.carSetup?.garageValues ?? {}
+    const r = await fetch(`${LMU_URL}/rest/options/setControls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    })
+    if (!r.ok) return res.status(r.status).json({ error: 'LMU error' })
+    res.json({})
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
+})
+
+app.post('/api/lmu/center', async (req, res) => {
+  try {
+    const liveR = await fetch(`${LMU_URL}/rest/options/liveInputs`)
+    if (!liveR.ok) throw new Error('liveInputs failed')
+    const live = await liveR.json()
+
+    const currentPos = live?.liveInputs?.di?.[0]?.['raw inputs']?.steerLeft
+    if (currentPos == null) return res.status(502).json({ error: 'No steering data' })
+
+    // Safety: reject if more than 85° off center (900° wheel → half=450° → 85/450=0.189)
+    if (Math.abs(currentPos - 0.5) > 0.189) {
+      return res.status(400).json({ error: 'Wheel too far from center (>85°)' })
     }
-  } catch (_) {}
 
-  const changed = Object.entries(garageValues).filter(([key_param, val]) => {
-    if (val.value === undefined || val.value === '') return false
-    return currentValues[key_param]?.value !== val.value
-  })
+    const ctrlR = await fetch(`${LMU_URL}/rest/options/UIScreen/Controls`)
+    if (!ctrlR.ok) throw new Error('Controls failed')
+    const ctrl = await ctrlR.json()
 
-  const results = await Promise.all(
-    changed.map(([key_param, val]) =>
-      fetch(`${LMU_URL}/rest/garage/${key_param}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: val.value }),
-      }).then(r => r.ok ? null : `${key_param}: ${r.status}`)
-        .catch(err => `${key_param}: ${err.message}`)
-    )
-  )
+    const devices = ctrl.allControls.directInput.Devices
+    for (const dev of Object.values(devices)) {
+      if (dev['instance name']?.includes('VNM Direct Drive') && dev['input axis properties']) {
+        const ax = dev['input axis properties']
+        if (ax['X+']) { ax['X+'].center = currentPos; ax['X+'].min = currentPos }
+        if (ax['X-']) { ax['X-'].center = currentPos; ax['X-'].min = currentPos }
+      }
+    }
 
-  const errors = results.filter(Boolean)
+    const setR = await fetch(`${LMU_URL}/rest/options/setControls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ctrl),
+    })
+    if (!setR.ok) throw new Error('setControls failed')
 
-  res.json({ ok: true, sessionId: key, summary, createdAt, changed: changed.length, errors: errors.length ? errors : undefined })
+    res.json({ ok: true, center: currentPos })
+  } catch (err) {
+    res.status(502).json({ error: err.message })
+  }
 })
 
-// ── Healthcheck ───────────────────────────────────────────────────────────────
-app.get('/api/health', async (req, res) => {
-  const result = { hub: 'ok', redis: 'disconnected', lmu: 'disconnected' }
-
-  try {
-    await Promise.race([
-      redis.ping(),
-      new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 500))
-    ])
-    result.redis = 'connected'
-  } catch {}
-
-  try {
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 500)
-    await fetch(`${LMU_URL}/rest/garage/summary`, { signal: ctrl.signal })
-    clearTimeout(t)
-    result.lmu = 'connected'
-  } catch {}
-
-  res.json(result)
-})
-
-const PORT = process.env.PORT || 8080
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`LMU Setup Sharing running on http://0.0.0.0:${PORT}`)
-  console.log(`Pointing to LMU at ${LMU_URL}`)
+  console.log(`LMU FFB Control running on http://0.0.0.0:${PORT}`)
+  console.log(`LMU at ${LMU_URL}`)
 })

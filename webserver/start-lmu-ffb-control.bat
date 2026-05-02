@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0backend"
 
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":3001 " ^| findstr "LISTENING"') do (
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":3002 " ^| findstr "LISTENING"') do (
   taskkill /PID %%p /F >nul 2>&1
 )
 
@@ -14,11 +14,11 @@ for /f %%i in ('powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily
 
 echo  LMU Setup HUB
 echo  ================================
-echo  Local:   http://localhost:3001
-echo  Network: http://%LOCAL_IP%:3001
-echo  Host:    http://%COMPUTERNAME%:3001
+echo  Local:   http://localhost:3002
+echo  Network: http://%LOCAL_IP%:3002
+echo  Host:    http://%COMPUTERNAME%:3002
 echo  ================================
 echo.
-start "" http://localhost:3001
+start "" http://localhost:3002
 node index.js
 pause

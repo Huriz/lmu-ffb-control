@@ -1,102 +1,58 @@
-# LMU Setup HUB
+# LMU FFB Control
 
-Share Le Mans Ultimate car setups between drivers instantly over the internet — no file transfers, no Discord uploads.
+Mobile web interface to adjust Force Feedback strength in **Le Mans Ultimate** in real time while driving.
 
-## How it works
+## What it does
 
-Each driver runs this server on their own PC (the one with LMU open). Both connect to the same Upstash Redis instance in the cloud.
+- **4-zone touch pad** — tap to change FFB by +1%, +5%, −1%, −5%
+- **Center button** — re-calibrates the steering wheel center (sets axis neutral point via LMU REST API)
+- **Live FFB badge** — always shows current FFB % in the header
+- **Flash feedback** — on each change the new value flashes in red (harder) or blue (softer) over the center button
+
+## Architecture
 
 ```
-Driver A (sends)                    Upstash Redis               Driver B (receives)
-─────────────────                   ─────────────               ────────────────────
-Opens UI on phone
-Types a name → SEND ───────────────► SET key ◄──────────────── Types same name → RECEIVE
-                                                                 Setup applied to LMU ✓
+Phone/Tablet browser
+    └── Node.js proxy  (port 3002, this machine)
+            └── LMU REST API  (port 6397, localhost)
 ```
 
-1. Driver A opens the UI, types a session name, taps **SEND**
-2. Server reads the active setup from LMU's local API → uploads to Redis
-3. Driver A shares the session name with Driver B (Discord, chat, etc.)
-4. Driver B opens the UI on their PC, types the same name, taps **RECEIVE**
-5. Setup is applied to their LMU automatically
+The proxy is needed to avoid CORS — LMU's REST API does not allow cross-origin requests.
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) 18+
-- Le Mans Ultimate running on the same PC (must be in the garage for the API to work)
-- A free [Upstash](https://upstash.com) Redis database
-- **WiFi or LAN connection** — the phone/tablet used as the UI must be on the same local network as the PC running the server
+- **Node.js** v18+
+- **Le Mans Ultimate** running with the REST API enabled (default: `localhost:6397`)
+- Both devices on the same network
 
-## Setup
+## Running
 
-**1. Clone the repo**
-```bash
-git clone https://github.com/Huriz/lmu-setup-hub.git
-cd lmu-setup-hub
-```
-
-**2. Open `webserver/backend/server.cfg` and fill in your Upstash Redis URL**
-
-```
-PORT=3001
-REDIS_URL=rediss://default:YOUR_TOKEN@YOUR_HOST.upstash.io:6379
-LMU_URL=http://localhost:6397
-TTL_SECONDS=3600
-```
-
-| Parameter | Description |
-|-----------|-------------|
-| `PORT` | Port the web server listens on. Open `http://your-ip:<PORT>` in a browser or on your phone. |
-| `REDIS_URL` | Upstash Redis connection URL — contains your password, keep the file private. Get it at upstash.com → your database → **Connect** → **ioredis**. |
-| `LMU_URL` | Address of LMU's local API. Don't change this unless LMU moves to a different port. |
-| `TTL_SECONDS` | How long setups will stay alive in seconds. `3600` = 1 hour. |
-
-**3. Run**
-
-Double-click `webserver/start-lmu-setup-hub.bat` — it installs dependencies, shows your addresses, and opens the browser.
+Double-click `webserver/start-lmu-ffb-control.bat` — it installs dependencies, starts the server, and opens the browser automatically.
 
 Or manually:
+
 ```bash
 cd webserver/backend
 npm install
 node index.js
 ```
 
-## Usage
+Then open `http://<your-pc-ip>:3002` on your phone.
 
-| Action | Who | Steps |
-|--------|-----|-------|
-| Share your setup | Driver sending | Open UI → type a name → tap **SEND** |
-| Load a setup | Driver receiving | Open UI → type same name → tap **RECEIVE** |
+## LMU REST API used
 
-- Session names: max 10 characters, letters and numbers only
-- Sessions expire after 1 hour
-- LMU must be open **in the garage** — the API is not active in menus
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/rest/options/UIScreen/Controls` | Read FFB strength and full device config |
+| POST | `/rest/options/setControls` | Write FFB strength (requires full Controls JSON) |
+| GET | `/rest/options/liveInputs` | Read real-time steering axis position (for center) |
 
-## Accessing from another device (phone, tablet)
-
-When you run `start-lmu-setup-hub.bat`, it prints the addresses you can use:
-
+FFB value is stored at:
 ```
-  LMU Setup HUB
-  ================================
-  Local:   http://localhost:3001
-  Network: http://192.168.1.X:3001   ← open this on your phone
-  Host:    http://YOUR-PC-NAME:3001  ← alternative if DNS resolves
-  ================================
+allControls.directInput.Devices[<wheel>]["Force Feedback"]["Steering effects strength"]
 ```
+Scale: 0–10000 (displayed as 0–100%).
 
-## Tech stack
+## Device detection
 
-- **Node.js + Express** — HTTP server and LMU API proxy
-- **ioredis** — Redis client (Upstash compatible)
-- **Upstash Redis** — serverless Redis for session storage
-- **LMU REST API** — local garage API (port 6397)
-
-## Future implementation
-
-- Setup page accessible from the UI to change `server.cfg` parameters (Redis URL, port, TTL) on the fly, without editing the file manually
-
-## License
-
-MIT License — Copyright (c) 2025 Huriz
+The server auto-detects the wheel by looking for a device whose `instance name` contains `VNM Direct Drive`. Falls back to the first device of type `Wheel` with Force Feedback enabled.

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#161618">
+<title>LMU FFB Control</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #161618;
+    --bg2:       #202024;
+    --bg3:       #28282e;
+    --bg4:       #303036;
+    --border:    #3a3a42;
+    --red:       #cc1515;
+    --red-dark:  #991010;
+    --green:     #3cc43c;
+    --text:      #e8e8e8;
+    --text2:     #999;
+    --text3:     #555;
+    --radius:    6px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 13px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── HEADER ── */
+  #header {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg2);
+    border-bottom: 2px solid var(--red);
+    flex-shrink: 0;
+  }
+  #header-top {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 46px;
+    gap: 12px;
+  }
+  #logo {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  #logo svg { width: 28px; height: 28px; flex-shrink: 0; }
+  #app-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #fff;
+  }
+
+  #ffb-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text2);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+  }
+
+  #conn-dot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    transition: background 0.3s, box-shadow 0.3s;
+    flex-shrink: 0;
+  }
+  #conn-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  #fs-btn {
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 4px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  #fs-btn:hover { color: var(--text); }
+
+  /* ── BODY / CONTENT ── */
+  #body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  #content {
+    flex: 1;
+    overflow: hidden;
+    padding: 0;
+    position: relative;
+  }
+
+  /* ── RACE PAD ── */
+  #tab-race {
+    display: block;
+    position: absolute;
+    inset: 0;
+  }
+
+  #race-pad {
+    position: absolute;
+    inset: 0;
+  }
+
+  .pad-slice {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: clamp(22px, 6vw, 48px);
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: filter 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pad-slice:active { filter: brightness(1.4); }
+
+  .slice-tl { top: 0; left: 0;     background: #c48888; }
+  .slice-tr { top: 0; right: 0;    background: #8c5050; }
+  .slice-bl { bottom: 0; left: 0;  background: #6a94be; }
+  .slice-br { bottom: 0; right: 0; background: #4a6a98; }
+
+  .slice-tl .pad-label { transform: translate(-18%, -18%); }
+  .slice-tr .pad-label { transform: translate( 18%, -18%); }
+  .slice-bl .pad-label { transform: translate(-18%,  18%); }
+  .slice-br .pad-label { transform: translate( 18%,  18%); }
+
+  .pad-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    gap: 4px;
+  }
+  .pad-label small {
+    font-size: 0.38em;
+    font-weight: 700;
+    opacity: 0.8;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* ── CENTER (informador + boton) ── */
+  #pad-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    z-index: 2;
+    pointer-events: none;
+    width: 0; height: 0;
+  }
+
+  #center-flash, #btn-center {
+    position: absolute;
+    top: 0; left: 0;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+  }
+
+  #center-flash, #btn-center {
+    width: clamp(160px, 44vw, 340px);
+    height: clamp(76px, 20vw, 156px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    font-size: clamp(22px, 6vw, 44px);
+    font-weight: 800;
+    letter-spacing: 3px;
+  }
+
+  #center-flash {
+    font-variant-numeric: tabular-nums;
+    background: rgba(16, 16, 18, 0.92);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  #center-flash.visible { opacity: 1; }
+  #center-flash.up   { color: #c48888; }
+  #center-flash.down { color: #6a94be; }
+
+  #btn-center {
+    pointer-events: all;
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #btn-center:hover  { background: var(--bg4); border-color: #555; color: var(--text); }
+  #btn-center:active { filter: brightness(1.3); }
+  #btn-center.ok     { background: var(--green); border-color: var(--green); color: #000; }
+  #btn-center.err    { background: var(--red);   border-color: var(--red);   color: #fff; }
+
+  /* ── LOADING OVERLAY ── */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 200;
+  }
+  #loading-overlay.hidden { display: none; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--red);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-overlay span { font-size: 13px; color: var(--text2); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 16px; left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 13px;
+    color: var(--text2);
+    transition: transform 0.25s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div id="header-top">
+    <button id="fs-btn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+    <div id="logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <polygon points="16,2 30,28 2,28" fill="none" stroke="#cc1515" stroke-width="2.5"/>
+        <text x="16" y="23" text-anchor="middle" fill="white" font-size="10" font-weight="bold" font-family="sans-serif">L</text>
+      </svg>
+      <span id="app-name">LMU FFB Control</span>
+      <div id="ffb-badge">—</div>
+    </div>
+    <div id="conn-dot"></div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div id="body">
+  <div id="content">
+
+    <div id="tab-race">
+      <div id="race-pad">
+        <button class="pad-slice slice-tl" ontouchstart="tap(event,100)"  onclick="raceFFB(100)">
+          <div class="pad-label"><span>+1%</span><small>FFB</small></div>
+        </button>
+        <button class="pad-slice slice-tr" ontouchstart="tap(event,500)"  onclick="raceFFB(500)">
+          <div class="pad-label"><span>+5%</span><small>FFB</small></div>
+        </button>
+        <button class="pad-slice slice-bl" ontouchstart="tap(event,-100)" onclick="raceFFB(-100)">
+          <div class="pad-label"><span>−1%</span><small>FFB</small></div>
+        </button>
+        <button class="pad-slice slice-br" ontouchstart="tap(event,-500)" onclick="raceFFB(-500)">
+          <div class="pad-label"><span>−5%</span><small>FFB</small></div>
+        </button>
+
+        <div id="pad-center">
+          <div id="center-flash"></div>
+          <button id="btn-center" onclick="doCenter()">CENTER</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <span>Connecting to LMU…</span>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const DEVICE_HINT = 'VNM Direct Drive';
+
+let connected      = false;
+let currentValue   = null;
+let cachedControls = null;
+let deviceKey      = null;
+let pending        = false;
+
+const $dot       = document.getElementById('conn-dot');
+const $overlay   = document.getElementById('loading-overlay');
+const $badge     = document.getElementById('ffb-badge');
+const $flash     = document.getElementById('center-flash');
+const $btnCenter = document.getElementById('btn-center');
+
+let flashTimer;
+function flashDisplay(dir, text) {
+  $flash.textContent = text;
+  $flash.classList.remove('up', 'down');
+  if (dir) $flash.classList.add(dir);
+  $flash.classList.add('visible');
+  $btnCenter.style.display = 'none';
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => {
+    $flash.classList.remove('visible', 'up', 'down');
+    $btnCenter.style.display = '';
+  }, 1400);
+}
+
+function findDeviceKey(data) {
+  const devices = data?.allControls?.directInput?.Devices;
+  if (!devices) return null;
+  for (const [k, d] of Object.entries(devices)) {
+    if (d['instance name']?.includes(DEVICE_HINT)) return k;
+  }
+  for (const [k, d] of Object.entries(devices)) {
+    if (d.Type === 'Wheel' && d['Force Feedback']) return k;
+  }
+  return null;
+}
+
+async function getControls() {
+  const r = await fetch('/api/lmu/controls');
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function postControls(data) {
+  const r = await fetch('/api/lmu/setControls', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) throw new Error(r.status);
+}
+
+function setConnected(state) {
+  if (connected === state) return;
+  connected = state;
+  $dot.classList.toggle('connected', state);
+  if (!state) {
+    $badge.textContent = '—';
+    currentValue = null;
+    cachedControls = null;
+    $overlay.classList.remove('hidden');
+  } else {
+    $overlay.classList.add('hidden');
+  }
+}
+
+function displayValue(v, flash = false, dir = null) {
+  const text = v === null ? '—' : (v / 100).toFixed(1) + '%';
+  $badge.textContent = text;
+  if (flash) flashDisplay(dir, text);
+}
+
+async function poll() {
+  try {
+    const data = await getControls();
+    if (!deviceKey) deviceKey = findDeviceKey(data);
+    if (deviceKey) {
+      currentValue   = data.allControls.directInput.Devices[deviceKey]['Force Feedback']['Steering effects strength'];
+      cachedControls = data;
+      if (!pending) displayValue(currentValue, false);
+    }
+    setConnected(true);
+  } catch {
+    setConnected(false);
+  }
+}
+
+async function raceFFB(delta) {
+  if (!connected || cachedControls === null || currentValue === null) {
+    showToast('Not connected to LMU');
+    return;
+  }
+  let next = Math.round(currentValue + delta);
+  next = Math.max(0, Math.min(10000, next));
+  if (next === Math.round(currentValue)) return;
+
+  pending = true;
+  currentValue = next;
+  displayValue(next, true, delta > 0 ? 'up' : 'down');
+
+  cachedControls.allControls.directInput.Devices[deviceKey]['Force Feedback']['Steering effects strength'] = next;
+
+  try {
+    await postControls(cachedControls);
+  } catch {
+    showToast('Failed to set FFB');
+  } finally {
+    pending = false;
+  }
+}
+
+async function doCenter() {
+  if (!connected) { showToast('Not connected to LMU'); return; }
+  const $btn = document.getElementById('btn-center');
+  $btn.disabled = true;
+  try {
+    const r = await fetch('/api/lmu/center', { method: 'POST' });
+    const data = await r.json();
+    if (!r.ok) {
+      showToast(data.error || 'Center failed');
+      $btn.classList.add('err');
+    } else {
+      $btn.classList.add('ok');
+      showToast('Centered');
+    }
+  } catch {
+    showToast('Center failed');
+    $btn.classList.add('err');
+  } finally {
+    $btn.disabled = false;
+    setTimeout(() => $btn.classList.remove('ok', 'err'), 1500);
+  }
+}
+
+function tap(e, delta) {
+  e.preventDefault();
+  raceFFB(delta);
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
+
+let toastTimer;
+const $toast = document.getElementById('toast');
+function showToast(msg) {
+  $toast.textContent = msg;
+  $toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $toast.classList.remove('show'), 2200);
+}
+
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>
