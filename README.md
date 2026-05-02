@@ -39,20 +39,3 @@ node index.js
 
 Then open `http://<your-pc-ip>:3002` on your phone.
 
-## LMU REST API used
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/rest/options/UIScreen/Controls` | Read FFB strength and full device config |
-| POST | `/rest/options/setControls` | Write FFB strength (requires full Controls JSON) |
-| GET | `/rest/options/liveInputs` | Read real-time steering axis position (for center) |
-
-FFB value is stored at:
-```
-allControls.directInput.Devices[<wheel>]["Force Feedback"]["Steering effects strength"]
-```
-Scale: 0–10000 (displayed as 0–100%).
-
-## Device detection
-
-The server auto-detects the wheel by looking for a device whose `instance name` contains `VNM Direct Drive`. Falls back to the first device of type `Wheel` with Force Feedback enabled.
