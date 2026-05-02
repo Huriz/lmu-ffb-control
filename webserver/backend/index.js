@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import dotenv from 'dotenv'
 
-dotenv.config()
+dotenv.config({ path: './server.cfg' })
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -124,12 +124,25 @@ app.post('/api/pull', async (req, res) => {
 
 // ── Healthcheck ───────────────────────────────────────────────────────────────
 app.get('/api/health', async (req, res) => {
+  const result = { hub: 'ok', redis: 'disconnected', lmu: 'disconnected' }
+
   try {
-    await redis.ping()
-    res.json({ status: 'ok', redis: 'connected' })
-  } catch {
-    res.status(500).json({ status: 'error', redis: 'disconnected' })
-  }
+    await Promise.race([
+      redis.ping(),
+      new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 500))
+    ])
+    result.redis = 'connected'
+  } catch {}
+
+  try {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 500)
+    await fetch(`${LMU_URL}/rest/garage/summary`, { signal: ctrl.signal })
+    clearTimeout(t)
+    result.lmu = 'connected'
+  } catch {}
+
+  res.json(result)
 })
 
 const PORT = process.env.PORT || 8080

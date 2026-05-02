@@ -14,10 +14,10 @@ Types a name → SEND ───────────────► SET key �
                                                                  Setup applied to LMU ✓
 ```
 
-1. Driver A opens `http://localhost:3001`, types a session name, taps **SEND**
-2. Server reads the active setup from LMU's local REST API → uploads to Redis
+1. Driver A opens the UI, types a session name, taps **SEND**
+2. Server reads the active setup from LMU's local API → uploads to Redis
 3. Driver A shares the session name with Driver B (Discord, chat, etc.)
-4. Driver B opens `http://localhost:3001` on their PC, types the same name, taps **RECEIVE**
+4. Driver B opens the UI on their PC, types the same name, taps **RECEIVE**
 5. Setup is applied to their LMU automatically
 
 ## Requirements
@@ -25,6 +25,7 @@ Types a name → SEND ───────────────► SET key �
 - [Node.js](https://nodejs.org) 18+
 - Le Mans Ultimate running on the same PC (must be in the garage for the API to work)
 - A free [Upstash](https://upstash.com) Redis database
+- **WiFi or LAN connection** — the phone/tablet used as the UI must be on the same local network as the PC running the server
 
 ## Setup
 
@@ -34,24 +35,25 @@ git clone https://github.com/Huriz/lmu-setup-hub.git
 cd lmu-setup-hub
 ```
 
-**2. Create your `.env`**
-```bash
-cp webserver/backend/.env.example webserver/backend/.env
-```
+**2. Open `webserver/backend/server.cfg` and fill in your Upstash Redis URL**
 
-Edit `.env` and fill in your Upstash Redis URL:
-```env
+```
 PORT=3001
 REDIS_URL=rediss://default:YOUR_TOKEN@YOUR_HOST.upstash.io:6379
 LMU_URL=http://localhost:6397
 TTL_SECONDS=3600
 ```
 
-> Get your `REDIS_URL` from the Upstash console → your database → **Connect** → **ioredis**
+| Parameter | Description |
+|-----------|-------------|
+| `PORT` | Port the web server listens on. Open `http://your-ip:<PORT>` in a browser or on your phone. |
+| `REDIS_URL` | Upstash Redis connection URL — contains your password, keep the file private. Get it at upstash.com → your database → **Connect** → **ioredis**. |
+| `LMU_URL` | Address of LMU's local API. Don't change this unless LMU moves to a different port. |
+| `TTL_SECONDS` | How long setups will stay alive in seconds. `3600` = 1 hour. |
 
 **3. Run**
 
-Double-click `webserver/start.bat` — it installs dependencies, shows your LAN IP, and opens the browser.
+Double-click `webserver/start-lmu-setup-hub.bat` — it installs dependencies, shows your addresses, and opens the browser.
 
 Or manually:
 ```bash
@@ -71,15 +73,16 @@ node index.js
 - Sessions expire after 1 hour
 - LMU must be open **in the garage** — the API is not active in menus
 
-## Accessing from phone (LAN)
+## Accessing from another device (phone, tablet)
 
-When you run `start.bat`, it prints your local IP:
+When you run `start-lmu-setup-hub.bat`, it prints the addresses you can use:
 
 ```
   LMU Setup HUB
   ================================
   Local:   http://localhost:3001
   Network: http://192.168.1.X:3001   ← open this on your phone
+  Host:    http://YOUR-PC-NAME:3001  ← alternative if DNS resolves
   ================================
 ```
 
@@ -88,19 +91,12 @@ When you run `start.bat`, it prints your local IP:
 - **Node.js + Express** — HTTP server and LMU API proxy
 - **ioredis** — Redis client (Upstash compatible)
 - **Upstash Redis** — serverless Redis for session storage
-- **LMU REST API** — local garage API on `localhost:6397`
+- **LMU REST API** — local garage API (port 6397)
 
-## LMU API notes
+## Future implementation
 
-The server talks to LMU's local REST API (`localhost:6397`) server-to-server, so no CORS issues.
-
-On PULL, it reads the current LMU state first, diffs it against the stored setup, and only sends parameters that actually changed — using `Promise.all` for parallel requests.
-
-Things that don't work via the LMU API (tried):
-- Creating/saving named setup files
-- `POST /rest/garage/refreshSetups` — no visible effect
-- Sending the full setup JSON in one shot — must iterate individual keys
+- Setup page accessible from the UI to change `server.cfg` parameters (Redis URL, port, TTL) on the fly, without editing the file manually
 
 ## License
 
-MIT
+MIT License — Copyright (c) 2025 Huriz

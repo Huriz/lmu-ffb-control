@@ -115,9 +115,12 @@
     justify-content: center;
     gap: 8px;
     margin-top: 14px;
-    font-size: 11px;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
     color: var(--muted);
-    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
   .status-dot {
@@ -169,6 +172,7 @@
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
     -webkit-appearance: none;
+    appearance: none;
     text-transform: lowercase;
     text-align: center;
   }
@@ -230,12 +234,13 @@
   .btn-push:hover { background: #cc001e; }
 
   .btn-pull {
-    background: var(--accent2);
-    color: #ffffff;
+    background: #ffffff;
+    color: var(--accent);
+    border: 2px solid var(--accent);
     margin-bottom: 12px;
   }
 
-  .btn-pull:hover { background: #006fa8; }
+  .btn-pull:hover { background: #ffe5e8; }
 
   .btn:disabled {
     opacity: 0.4;
@@ -355,34 +360,45 @@
     to { transform: rotate(360deg); }
   }
 
-  /* Info cards */
-  .info-grid {
+  /* Status cards */
+  .status-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-top: 28px;
   }
 
-  .info-card {
+  .status-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 14px;
+    padding: 14px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
   }
 
-  .info-card-label {
-    font-size: 9px;
-    letter-spacing: 0.2em;
+  .status-card-label {
+    font-size: 8px;
+    letter-spacing: 0.15em;
     color: var(--muted);
     text-transform: uppercase;
-    margin-bottom: 4px;
+    text-align: center;
   }
 
-  .info-card-value {
+  .status-card-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-card-value {
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
     color: var(--text);
-    word-break: break-all;
   }
 
   /* Mode tabs */
@@ -418,20 +434,42 @@
     color: #ffffff;
   }
 
+  .tab.active-pull {
+    background: #ffffff;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+  }
+
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
+
+  /* Refresh button */
+  .btn-refresh {
+    position: absolute;
+    top: 28px;
+    right: 0;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 8px;
+    line-height: 1;
+    transition: color 0.2s, transform 0.4s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-refresh:hover { color: var(--text); }
+  .btn-refresh.spinning { animation: spin 0.6s linear; }
 </style>
 </head>
 <body>
 <div class="app">
 
-  <header>
+  <header style="position:relative">
     <div class="logo-sub">Le Mans Ultimate</div>
     <div class="logo-main">SETUP <span>HUB</span></div>
-    <div class="status-bar">
-      <div class="status-dot" id="statusDot"></div>
-      <span id="statusText">Connecting...</span>
-    </div>
+    <button class="btn-refresh" onclick="refreshHealth()" title="Refresh status">↻</button>
   </header>
 
   <!-- Tabs -->
@@ -443,13 +481,13 @@
   <!-- PUSH panel -->
   <div class="tab-panel active" id="panel-push">
     <div class="input-group">
-      <label class="input-label" for="pushName">Session name</label>
+      <label class="input-label" for="pushName">Setup key</label>
       <div class="input-wrap">
         <input
           type="text"
           id="pushName"
           maxlength="10"
-          placeholder="session name here"
+          placeholder="setup key here"
           autocomplete="off"
           autocorrect="off"
           spellcheck="false"
@@ -462,29 +500,18 @@
     <button class="btn btn-push" id="btnPush" onclick="doPush()" disabled>
       ⬆ UPLOAD SETUP
     </button>
-
-    <div class="info-grid">
-      <div class="info-card">
-        <div class="info-card-label">Server</div>
-        <div class="info-card-value" id="serverHost2" style="font-size:10px">—</div>
-      </div>
-      <div class="info-card">
-        <div class="info-card-label">LMU</div>
-        <div class="info-card-value" id="lmuStatus2" style="font-size:10px">—</div>
-      </div>
-    </div>
   </div>
 
   <!-- PULL panel -->
   <div class="tab-panel" id="panel-pull">
     <div class="input-group">
-      <label class="input-label" for="pullName">Friend's session name</label>
+      <label class="input-label" for="pullName">Friend's setup key</label>
       <div class="input-wrap">
         <input
           type="text"
           id="pullName"
           maxlength="10"
-          placeholder="session name here"
+          placeholder="setup key here"
           autocomplete="off"
           autocorrect="off"
           spellcheck="false"
@@ -497,15 +524,29 @@
     <button class="btn btn-pull" id="btnPull" onclick="doPull()" disabled>
       ⬇ LOAD INTO LMU
     </button>
+  </div>
 
-    <div class="info-grid">
-      <div class="info-card">
-        <div class="info-card-label">Server</div>
-        <div class="info-card-value" id="serverHost" style="font-size:10px">—</div>
+  <!-- Status cards (shared) -->
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="status-card-label">SetupHub</div>
+      <div class="status-card-row">
+        <div class="status-dot" id="dotHub"></div>
+        <div class="status-card-value" id="statusHub">—</div>
       </div>
-      <div class="info-card">
-        <div class="info-card-label">LMU</div>
-        <div class="info-card-value" id="lmuStatus" style="font-size:10px">—</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">LMU</div>
+      <div class="status-card-row">
+        <div class="status-dot" id="dotLmu"></div>
+        <div class="status-card-value" id="statusLmu">—</div>
+      </div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Redis</div>
+      <div class="status-card-row">
+        <div class="status-dot" id="dotRedis"></div>
+        <div class="status-card-value" id="statusRedis">—</div>
       </div>
     </div>
   </div>
@@ -536,39 +577,43 @@
       : originalText
   }
 
-  // ── Init ─────────────────────────────────────────────────────────────────────
-  document.getElementById('serverHost').textContent = window.location.host
-  document.getElementById('serverHost2').textContent = window.location.host
+  // ── Health ───────────────────────────────────────────────────────────────────
+  function setCard(name, ok) {
+    document.getElementById('dot' + name).className = 'status-dot ' + (ok ? 'ok' : 'err')
+    document.getElementById('status' + name).textContent = ok ? 'Connected' : 'Disconnected'
+  }
 
-  // Healthcheck
   async function checkHealth() {
     try {
-      const r = await fetch('/api/health')
+      const ctrl = new AbortController()
+      setTimeout(() => ctrl.abort(), 1500)
+      const r = await fetch('/api/health', { signal: ctrl.signal })
       const d = await r.json()
-      const dot = document.getElementById('statusDot')
-      const txt = document.getElementById('statusText')
-      if (d.redis === 'connected') {
-        dot.className = 'status-dot ok'
-        txt.textContent = 'Redis OK · LMU local'
-        document.getElementById('lmuStatus').textContent = 'localhost:6397'
-        document.getElementById('lmuStatus2').textContent = 'localhost:6397'
-      } else {
-        dot.className = 'status-dot err'
-        txt.textContent = 'Redis disconnected'
-      }
+      setCard('Hub', true)
+      setCard('Redis', d.redis === 'connected')
+      setCard('Lmu', d.lmu === 'connected')
     } catch {
-      document.getElementById('statusDot').className = 'status-dot err'
-      document.getElementById('statusText').textContent = 'Server not responding'
+      setCard('Hub', false)
+      setCard('Redis', false)
+      setCard('Lmu', false)
     }
   }
 
+  function refreshHealth() {
+    const btn = document.querySelector('.btn-refresh')
+    btn.classList.add('spinning')
+    btn.addEventListener('animationend', () => btn.classList.remove('spinning'), { once: true })
+    checkHealth()
+  }
+
   checkHealth()
-  setInterval(checkHealth, 10000)
+  setInterval(checkHealth, 2000)
 
   // ── Tabs ─────────────────────────────────────────────────────────────────────
   function switchTab(tab) {
     document.querySelectorAll('.tab').forEach((t,i) => {
-      t.classList.toggle('active', (i === 0 && tab==='push') || (i===1 && tab==='pull'))
+      t.classList.toggle('active', i === 0 && tab === 'push')
+      t.classList.toggle('active-pull', i === 1 && tab === 'pull')
     })
     document.getElementById('panel-push').classList.toggle('active', tab==='push')
     document.getElementById('panel-pull').classList.toggle('active', tab==='pull')

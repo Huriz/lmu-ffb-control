@@ -16,6 +16,7 @@ echo  LMU Setup HUB
 echo  ================================
 echo  Local:   http://localhost:3001
 echo  Network: http://%LOCAL_IP%:3001
+echo  Host:    http://%COMPUTERNAME%:3001
 echo  ================================
 echo.
 start "" http://localhost:3001

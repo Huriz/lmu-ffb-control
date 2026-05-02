@@ -158,26 +158,54 @@
 
   .logo-main span { color: #e30022; }
 
-  .status-bar {
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  .status-card {
+    background: #13131a;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-card-label {
+    font-size: 7px;
+    letter-spacing: 0.15em;
+    color: #6a6a8a;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .status-card-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    margin-bottom: 18px;
-    font-size: 10px;
-    color: #6a6a8a;
-    letter-spacing: 0.08em;
+    gap: 5px;
+  }
+
+  .status-card-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 7px;
+    font-weight: 700;
+    color: #f0f0f8;
   }
 
   .dot {
-    width: 6px; height: 6px;
+    width: 5px; height: 5px;
     border-radius: 50%;
   }
 
-  .dot.green { background: #00cc77; box-shadow: 0 0 6px #00cc77; animation: blink 2s infinite; }
-  .dot.blue  { background: #0088cc; box-shadow: 0 0 6px #0088cc; }
-
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .dot.green { background: #00cc77; box-shadow: 0 0 5px #00cc77; animation: blink 2s infinite; }
+  .dot.red   { background: #ff3860; }
 
   .tabs {
     display: flex;
@@ -205,7 +233,7 @@
   }
 
   .tab.active-push { background: #e30022; color: #ffffff; }
-  .tab.active-pull { background: #0088cc; color: #ffffff; }
+  .tab.active-pull { background: #ffffff; color: #e30022; border: 2px solid #e30022; }
 
   .field-label {
     font-size: 9px;
@@ -271,8 +299,8 @@
 
   .btn-push-mock { background: #e30022; color: #ffffff; }
   .btn-push-mock:hover { background: #cc001e; }
-  .btn-pull-mock { background: #0088cc; color: #ffffff; }
-  .btn-pull-mock:hover { background: #006fa8; }
+  .btn-pull-mock { background: #ffffff; color: #e30022; border: 2px solid #e30022; }
+  .btn-pull-mock:hover { background: #ffe5e8; }
 
   .info-row {
     display: grid;
@@ -426,10 +454,6 @@
 
           <div class="logo-sub">Le Mans Ultimate</div>
           <div class="logo-main">SETUP <span>HUB</span></div>
-          <div class="status-bar">
-            <div class="dot green"></div>
-            <span>Redis OK · LMU local</span>
-          </div>
 
           <div class="tabs">
             <div class="tab active-push" id="tabA-push">⬆ SEND</div>
@@ -437,20 +461,24 @@
           </div>
 
           <div id="panelA-push">
-            <div class="field-label">Session name</div>
+            <div class="field-label">Setup key</div>
             <div class="input-mock focused" id="inputA">
               <span class="input-text" id="inputAText"><span style="color:#e30022">█</span></span>
               <span class="char-badge" id="inputACount">0/10</span>
             </div>
             <div class="btn-mock btn-push-mock" id="btnA" onclick="demoSend()">⬆ UPLOAD SETUP</div>
-            <div class="info-row">
-              <div class="info-card">
-                <div class="info-card-label">Server</div>
-                <div class="info-card-value" style="font-size:8px">192.168.1.42:8080</div>
+            <div class="status-grid">
+              <div class="status-card">
+                <div class="status-card-label">SetupHub</div>
+                <div class="status-card-row"><div class="dot green"></div><div class="status-card-value">Connected</div></div>
               </div>
-              <div class="info-card">
-                <div class="info-card-label">LMU</div>
-                <div class="info-card-value" style="font-size:9px">localhost:6397</div>
+              <div class="status-card">
+                <div class="status-card-label">LMU</div>
+                <div class="status-card-row"><div class="dot green"></div><div class="status-card-value">Connected</div></div>
+              </div>
+              <div class="status-card">
+                <div class="status-card-label">Redis</div>
+                <div class="status-card-row"><div class="dot green"></div><div class="status-card-value">Connected</div></div>
               </div>
             </div>
           </div>
@@ -482,10 +510,6 @@
 
           <div class="logo-sub">Le Mans Ultimate</div>
           <div class="logo-main">SETUP <span>HUB</span></div>
-          <div class="status-bar">
-            <div class="dot green"></div>
-            <span>Redis OK · LMU local</span>
-          </div>
 
           <div class="tabs">
             <div class="tab" id="tabB-push" onclick="switchB()">⬆ SEND</div>
@@ -493,20 +517,24 @@
           </div>
 
           <div id="panelB-pull">
-            <div class="field-label">Friend's session name</div>
-            <div class="input-mock focused-pull" id="inputB">
-              <span class="input-text" id="inputBText"><span style="color:#0088cc">█</span></span>
+            <div class="field-label">Friend's setup key</div>
+            <div class="input-mock focused" id="inputB">
+              <span class="input-text" id="inputBText"><span style="color:#e30022">█</span></span>
               <span class="char-badge" id="inputBCount">0/10</span>
             </div>
             <div class="btn-mock btn-pull-mock" id="btnB" onclick="demoReceive()">⬇ LOAD INTO LMU</div>
-            <div class="info-row">
-              <div class="info-card">
-                <div class="info-card-label">Server</div>
-                <div class="info-card-value" style="font-size:8px">192.168.1.55:8080</div>
+            <div class="status-grid">
+              <div class="status-card">
+                <div class="status-card-label">SetupHub</div>
+                <div class="status-card-row"><div class="dot green"></div><div class="status-card-value">Connected</div></div>
               </div>
-              <div class="info-card">
-                <div class="info-card-label">LMU</div>
-                <div class="info-card-value" style="font-size:9px">localhost:6397</div>
+              <div class="status-card">
+                <div class="status-card-label">LMU</div>
+                <div class="status-card-row"><div class="dot green"></div><div class="status-card-value">Connected</div></div>
+              </div>
+              <div class="status-card">
+                <div class="status-card-label">Redis</div>
+                <div class="status-card-row"><div class="dot green"></div><div class="status-card-value">Connected</div></div>
               </div>
             </div>
           </div>
@@ -569,7 +597,7 @@
   }
 
   function demoReceive() {
-    typeText('inputBText', 'inputBCount', NAME, '#0088cc', () => {
+    typeText('inputBText', 'inputBCount', NAME, '#e30022', () => {
       setTimeout(() => {
         document.getElementById('btnB').textContent = '⏳ WAIT...'
         setTimeout(() => {
@@ -598,7 +626,7 @@
     showToast('toastB', false)
     document.getElementById('toastA').className = 'toast-mock success'
     document.getElementById('inputAText').innerHTML = '<span style="color:#e30022">█</span>'
-    document.getElementById('inputBText').innerHTML = '<span style="color:#0088cc">█</span>'
+    document.getElementById('inputBText').innerHTML = '<span style="color:#e30022">█</span>'
     document.getElementById('inputACount').textContent = '0/10'
     document.getElementById('inputBCount').textContent = '0/10'
     document.getElementById('btnA').textContent = '⬆ UPLOAD SETUP'
